@@ -1,0 +1,12 @@
+langchain>=0.3.0
+langgraph>=0.2.30
+google-generativeai>=0.8.4
+tweepy>=4.14.0
+python-dotenv>=1.1.0
+fastapi>=0.115.0
+uvicorn[standard]>=0.32.0
+apscheduler>=3.10.4
+tenacity>=8.5.0
+pydantic>=2.11.7
+httpx>=0.28.1
+redis>=5.1.1

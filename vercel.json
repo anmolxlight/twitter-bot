@@ -1,0 +1,38 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "src/main.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "src/main.py"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "src/main.py"
+    }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/tweet",
+      "schedule": "0 */3 * * *"
+    },
+    {
+      "path": "/api/cron/health",
+      "schedule": "*/30 * * * *"
+    }
+  ],
+  "functions": {
+    "src/main.py": {
+      "maxDuration": 300
+    }
+  },
+  "env": {
+    "PYTHONPATH": ".",
+    "VERCEL_DEPLOYMENT": "true"
+  }
+}
