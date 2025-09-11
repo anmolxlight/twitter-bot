@@ -2,12 +2,8 @@
   "version": 2,
   "crons": [
     {
-      "path": "/api/cron/tweet",
-      "schedule": "0 */3 * * *"
-    },
-    {
       "path": "/api/cron/health",
-      "schedule": "*/30 * * * *"
+      "schedule": "0 12 * * *"
     }
   ],
   "functions": {

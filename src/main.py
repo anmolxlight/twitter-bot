@@ -446,6 +446,125 @@ class TwitterBotApp:
             except Exception as e:
                 logger.error(f"Error during shutdown: {e}")
 
+# Enhanced endpoint for external cron services
+@self.app.post("/api/external/tweet")
+@self.app.get("/api/external/tweet")
+async def external_tweet_trigger(request: Request):
+    """Enhanced endpoint for external cron services like cron-job.org"""
+    try:
+        # Log the request source
+        user_agent = request.headers.get("user-agent", "unknown")
+        client_ip = request.client.host if request.client else "unknown"
+        
+        logger.info(f"External tweet trigger from {client_ip} ({user_agent})")
+        
+        # Optional: Add basic security check
+        # You can add a secret token in query params if needed
+        # secret = request.query_params.get("token")
+        # if secret != os.getenv("CRON_SECRET"):
+        #     raise HTTPException(status_code=403, detail="Invalid token")
+        
+        # Generate and post tweet
+        from src.tweet_generator import get_tweet
+        from src.twitter_client import post_tweet
+        
+        # Generate tweet
+        tweet_content = get_tweet()
+        logger.info(f"Generated tweet: {tweet_content[:50]}...")
+        
+        # Post tweet
+        tweet_id = post_tweet(tweet_content)
+        
+        result = {
+            "success": bool(tweet_id),
+            "tweet_id": tweet_id,
+            "content": tweet_content if tweet_id else None,
+            "timestamp": asyncio.get_event_loop().time(),
+            "triggered_by": "external_cron",
+            "source_ip": client_ip
+        }
+        
+        if tweet_id:
+            logger.info(f"External tweet posted successfully with ID: {tweet_id}")
+        else:
+            logger.error("External tweet posting failed")
+            result["error"] = "Failed to post tweet"
+        
+        return result
+        
+    except Exception as e:
+        logger.error(f"External tweet error: {e}")
+        return {
+            "success": False,
+            "error": str(e),
+            "timestamp": asyncio.get_event_loop().time(),
+            "triggered_by": "external_cron"
+        }
+
+@self.app.get("/api/external/health")
+async def external_health_check(request: Request):
+    """Enhanced health check for external monitoring"""
+    try:
+        client_ip = request.client.host if request.client else "unknown"
+        logger.info(f"External health check from {client_ip}")
+        
+        # Comprehensive health check
+        health_data = {
+            "status": "healthy",
+            "timestamp": asyncio.get_event_loop().time(),
+            "environment": os.getenv("VERCEL_ENV", "development"),
+            "checked_by": "external_monitor",
+            "source_ip": client_ip,
+            "components": {}
+        }
+        
+        # Check Twitter API
+        try:
+            account_info = self.twitter_client.get_account_info()
+            health_data["components"]["twitter"] = {
+                "status": "healthy" if account_info else "unhealthy",
+                "account": account_info.get("username") if account_info else None
+            }
+        except Exception as e:
+            health_data["components"]["twitter"] = {
+                "status": "error",
+                "error": str(e)
+            }
+        
+        # Check Gemini AI
+        try:
+            test_tweet = get_tweet()
+            health_data["components"]["gemini"] = {
+                "status": "healthy" if len(test_tweet) > 0 else "unhealthy",
+                "test_length": len(test_tweet) if test_tweet else 0
+            }
+        except Exception as e:
+            health_data["components"]["gemini"] = {
+                "status": "error",
+                "error": str(e)
+            }
+        
+        # Determine overall status
+        unhealthy_components = [
+            name for name, comp in health_data["components"].items() 
+            if comp["status"] in ["error", "unhealthy"]
+        ]
+        
+        if unhealthy_components:
+            health_data["status"] = "degraded"
+            health_data["issues"] = unhealthy_components
+        
+        return health_data
+        
+    except Exception as e:
+        logger.error(f"External health check error: {e}")
+        return {
+            "status": "error",
+            "error": str(e),
+            "timestamp": asyncio.get_event_loop().time(),
+            "checked_by": "external_monitor"
+        }
+
 # Global application instance
 twitter_bot_app = TwitterBotApp()
 app = twitter_bot_app.app
