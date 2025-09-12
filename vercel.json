@@ -1,18 +1,8 @@
 {
-  "version": 2,
   "crons": [
     {
-      "path": "/api/cron/health",
+      "path": "/health",
       "schedule": "0 12 * * *"
     }
-  ],
-  "functions": {
-    "src/main.py": {
-      "maxDuration": 300
-    }
-  },
-  "env": {
-    "PYTHONPATH": ".",
-    "VERCEL_DEPLOYMENT": "true"
-  }
+  ]
 }
