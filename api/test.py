@@ -1,5 +1,5 @@
 """
-Simple test endpoint for Vercel
+Simple test endpoint for Vercel with proper ASGI handler
 """
 
 from fastapi import FastAPI
@@ -14,6 +14,9 @@ def read_root():
 def test_endpoint():
     return {"test": "success", "platform": "vercel"}
 
-# For Vercel
-def handler(request, response):
-    return app(request, response)
+@app.get("/health")
+def health():
+    return {"status": "healthy", "platform": "vercel"}
+
+# This is the correct way to export for Vercel
+# Vercel will automatically handle the ASGI interface

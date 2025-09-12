@@ -192,7 +192,7 @@ async def ping():
         "platform": "vercel"
     }
 
-# For external cron services
+# For external cron services like cron-job.org
 @app.post("/api/external/tweet")
 @app.get("/api/external/tweet")
 async def external_tweet(request: Request):
@@ -238,12 +238,5 @@ async def external_tweet(request: Request):
             "triggered_by": "external_cron"
         }
 
-# Vercel handler
-def handler(request, response):
-    """Vercel serverless handler"""
-    return app(request, response)
-
-# Export the app for Vercel
-# This is what Vercel will call
-def app_handler():
-    return app
+# Vercel will automatically use this app as an ASGI application
+# No need for custom handler functions
