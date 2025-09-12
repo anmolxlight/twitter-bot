@@ -12,7 +12,7 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, HTMLResponse
 import asyncio
 from dotenv import load_dotenv
 
@@ -33,14 +33,191 @@ app = FastAPI(
     version="1.0.0"
 )
 
-@app.get("/")
-async def root():
-    """Root endpoint"""
-    return {
-        "message": "AI Twitter Bot is running",
-        "status": "healthy",
-        "platform": "vercel"
-    }
+@app.get("/", response_class=HTMLResponse)
+async def dashboard_home():
+    """Serve the main dashboard HTML"""
+    html_content = """
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>AI Twitter Bot Dashboard</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    </head>
+    <body class="bg-gray-100">
+        <div class="container mx-auto px-4 py-8" x-data="dashboard()">
+            <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+                <h1 class="text-3xl font-bold text-gray-800 mb-2">AI Twitter Bot Dashboard</h1>
+                <p class="text-gray-600">Monitor and control your intelligent Twitter bot on Vercel</p>
+            </div>
+            
+            <!-- Status Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-2">Bot Status</h3>
+                    <div class="flex items-center">
+                        <div class="w-3 h-3 rounded-full mr-2 bg-green-500"></div>
+                        <span class="font-medium">Active on Vercel</span>
+                    </div>
+                    <p class="text-sm text-gray-600 mt-2" x-text="'Health: ' + status.health"></p>
+                </div>
+                
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-2">Twitter API</h3>
+                    <div class="flex items-center">
+                        <div class="w-3 h-3 rounded-full mr-2" :class="status.twitter === 'healthy' ? 'bg-green-500' : 'bg-red-500'"></div>
+                        <span x-text="status.twitter || 'checking...'" class="font-medium capitalize"></span>
+                    </div>
+                    <p class="text-sm text-gray-600 mt-2">API Connection</p>
+                </div>
+                
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-2">Gemini AI</h3>
+                    <div class="flex items-center">
+                        <div class="w-3 h-3 rounded-full mr-2" :class="status.gemini === 'healthy' ? 'bg-green-500' : 'bg-red-500'"></div>
+                        <span x-text="status.gemini || 'checking...'" class="font-medium capitalize"></span>
+                    </div>
+                    <p class="text-sm text-gray-600 mt-2">AI Generation</p>
+                </div>
+            </div>
+            
+            <!-- Controls -->
+            <div class="bg-white rounded-lg shadow p-6 mb-6">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">Bot Controls</h3>
+                <div class="flex flex-wrap gap-4">
+                    <button @click="triggerTweet()" 
+                            class="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium shadow">
+                        🚀 Generate & Post Tweet
+                    </button>
+                    
+                    <button @click="refreshStatus()" 
+                            class="px-6 py-3 bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-medium shadow">
+                        🔄 Refresh Status
+                    </button>
+                    
+                    <button @click="testHealth()" 
+                            class="px-6 py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium shadow">
+                        🏥 Health Check
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Last Tweet -->
+            <div class="bg-white rounded-lg shadow p-6 mb-6" x-show="lastTweet.content">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">Last Tweet</h3>
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <p class="text-gray-800 mb-2" x-text="lastTweet.content"></p>
+                    <div class="flex items-center justify-between text-sm text-gray-600">
+                        <span x-text="'ID: ' + lastTweet.id"></span>
+                        <span x-text="'Posted: ' + formatTime(lastTweet.timestamp)"></span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Activity Log -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">Activity Log</h3>
+                <div class="space-y-3" id="activity-log">
+                    <div class="text-gray-500 text-center py-4">
+                        Activity will appear here...
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            function dashboard() {
+                return {
+                    status: {
+                        health: 'checking...',
+                        twitter: 'checking...',
+                        gemini: 'checking...'
+                    },
+                    lastTweet: {},
+                    
+                    async init() {
+                        await this.refreshStatus();
+                    },
+                    
+                    async refreshStatus() {
+                        try {
+                            this.addActivity('🔄 Checking system status...');
+                            const response = await fetch('/health');
+                            const data = await response.json();
+                            this.status.health = data.status;
+                            this.status.twitter = data.components?.twitter || 'unknown';
+                            this.status.gemini = data.components?.gemini || 'unknown';
+                            this.addActivity('✅ Status refreshed successfully');
+                        } catch (error) {
+                            this.addActivity('❌ Failed to refresh status: ' + error.message);
+                            console.error('Failed to refresh status:', error);
+                        }
+                    },
+                    
+                    async triggerTweet() {
+                        try {
+                            this.addActivity('🚀 Generating tweet...');
+                            const response = await fetch('/api/trigger-tweet', { method: 'POST' });
+                            const data = await response.json();
+                            
+                            if (data.success) {
+                                this.lastTweet = {
+                                    content: data.content,
+                                    id: data.tweet_id,
+                                    timestamp: new Date().toISOString()
+                                };
+                                this.addActivity('✅ Tweet posted successfully! ID: ' + data.tweet_id);
+                            } else {
+                                this.addActivity('❌ Tweet failed: ' + data.error);
+                            }
+                        } catch (error) {
+                            this.addActivity('❌ Tweet error: ' + error.message);
+                            console.error('Failed to trigger tweet:', error);
+                        }
+                    },
+                    
+                    async testHealth() {
+                        await this.refreshStatus();
+                        this.addActivity('🏥 Health check completed');
+                    },
+                    
+                    addActivity(message) {
+                        const log = document.getElementById('activity-log');
+                        const timestamp = new Date().toLocaleTimeString();
+                        const entry = document.createElement('div');
+                        entry.className = 'border-l-4 border-blue-500 pl-4 py-2 bg-blue-50';
+                        entry.innerHTML = `
+                            <div class="flex items-center justify-between">
+                                <span class="text-blue-800">${message}</span>
+                                <span class="text-sm text-gray-500">${timestamp}</span>
+                            </div>
+                        `;
+                        
+                        // Remove placeholder text
+                        if (log.children.length === 1 && log.children[0].textContent.includes('Activity will appear')) {
+                            log.innerHTML = '';
+                        }
+                        
+                        log.insertBefore(entry, log.firstChild);
+                        
+                        // Keep only last 10 entries
+                        while (log.children.length > 10) {
+                            log.removeChild(log.lastChild);
+                        }
+                    },
+                    
+                    formatTime(timestamp) {
+                        return new Date(timestamp).toLocaleString();
+                    }
+                }
+            }
+        </script>
+    </body>
+    </html>
+    """
+    return HTMLResponse(content=html_content)
 
 @app.get("/health")
 async def health_check():
