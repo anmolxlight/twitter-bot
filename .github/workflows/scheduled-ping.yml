@@ -1,0 +1,26 @@
+name: Scheduled URL Ping
+
+on:
+  schedule:
+    # Runs every 3 hours
+    - cron: '0 */3 * * *'
+  workflow_dispatch: # Allows manual triggering from GitHub UI
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Ping URL
+        run: |
+          curl -X GET "https://twitter-bot-ten-sigma.vercel.app/api/external/tweet" \
+            -H "User-Agent: GitHub-Actions-Scheduled-Ping" \
+            -w "\nHTTP Status: %{http_code}\n" \
+            -o response.txt
+          
+          echo "Response received:"
+          cat response.txt
+          
+      - name: Check Status
+        run: |
+          echo "Ping completed at $(date)"
