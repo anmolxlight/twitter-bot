@@ -53,9 +53,11 @@ class TweetGenerator:
     """Advanced tweet generator with LangGraph orchestration"""
     
     def __init__(self):
-        self.style = os.getenv("BOT_STYLE", "witty, tech-savvy, conversational")
+        self.style = os.getenv("BOT_STYLE", "techy gen z into cinema, anime, ml, football, f1, web3, startups")
         self.max_retries = 3
         self.max_history = 20
+        self.controversial_frequency = 0.35  # 35% chance of controversial tweet
+        self.tweet_counter = 0
         
         # Initialize Gemini models with fallback - using correct API format
         self.primary_model = "gemini-2.5-flash"  # Latest experimental model
@@ -68,7 +70,21 @@ class TweetGenerator:
             "avoid_hashtags": True,
             "avoid_links": True,
             "avoid_mentions": True,
-            "topics": ["technology", "AI", "programming", "innovation", "life observations"]
+            "lowercase_only": True,
+            "topics": [
+                "anime and cinema critique",
+                "machine learning and AI developments",
+                "football tactics and moments",
+                "formula 1 drama and tech",
+                "filmmaking and cinematography",
+                "web3 and crypto takes",
+                "startup culture and tech industry",
+                "web shows and streaming content",
+                "computer science and programming",
+                "tech products and gadgets",
+                "sports analytics and stats",
+                "creative technology and tools"
+            ]
         }
         
         # Build LangGraph workflow
@@ -298,11 +314,14 @@ class TweetGenerator:
         if retry_count >= self.max_retries:
             # Generate a fallback tweet
             fallback_tweets = [
-                "Sometimes the best insights come from the simplest observations. 🤔",
-                "Technology is reshaping our world in ways we're only beginning to understand.",
-                "The future belongs to those who can adapt and learn continuously.",
-                "Innovation happens when curiosity meets persistence.",
-                "Every challenge is an opportunity to grow and improve."
+                "ngl the intersection of tech and creativity is where the magic happens",
+                "been thinking about how ml models are basically pattern matching on steroids",
+                "lowkey miss when f1 cars actually sounded cool",
+                "cinematography in anime hits different when you notice the composition",
+                "everyone talks about disruption but most startups just copy what works",
+                "the best code is the code you don't have to write tbh",
+                "football tactics evolved so much but people still think it's just running around",
+                "watching how streaming changed content creation is wild"
             ]
             
             state["current_tweet"] = random.choice(fallback_tweets)
@@ -334,39 +353,175 @@ class TweetGenerator:
     
     def _build_prompt(self, state: TweetState) -> str:
         """Build the generation prompt"""
-        # Professional prompt for business/tech content
-        topics = [
-            "innovation and technology trends",
-            "productivity and personal growth", 
-            "future of work and AI",
-            "creative problem solving",
-            "entrepreneurship insights"
+        self.tweet_counter += 1
+        
+        # Determine if this should be a controversial tweet
+        is_controversial = random.random() < self.controversial_frequency
+        
+        # Diverse topics matching the personality
+        regular_topics = [
+            # Cinema & Shows
+            "a hot take on a recent film or movie trend",
+            "why some director's style is underrated or overrated",
+            "unpopular opinion about a popular web series",
+            "cinematography techniques that viewers don't notice",
+            "how streaming changed the way we consume content",
+            
+            # Anime
+            "why certain anime is overhyped or underrated",
+            "comparing anime storytelling to western cinema",
+            "discussing animation quality and studio drama",
+            "manga vs anime adaptation debates",
+            
+            # ML & AI
+            "practical thoughts on current AI developments",
+            "why some ml models are overhyped",
+            "real world applications of machine learning",
+            "the hype vs reality in AI products",
+            "llm capabilities and limitations",
+            "transformer architectures and their impact",
+            
+            # Football
+            "tactical analysis of recent matches",
+            "why certain players are overrated or underrated",
+            "comparing football eras and playstyles",
+            "transfer market thoughts and club strategies",
+            "analytics in modern football",
+            
+            # Formula 1
+            "f1 technical regulations and their impact",
+            "driver comparisons and team strategies",
+            "the engineering behind f1 performance",
+            "race strategy and pit stop analysis",
+            "why certain teams dominate certain tracks",
+            
+            # Tech & CS
+            "programming language preferences and why",
+            "software engineering practices and trade-offs",
+            "thoughts on new frameworks or tools",
+            "developer culture and work experiences",
+            "interesting algorithms or data structures",
+            
+            # Web3 & Startups
+            "realistic takes on blockchain use cases",
+            "startup culture observations",
+            "why most web3 projects don't make sense",
+            "founder mindset and building in public",
+            "vc funding dynamics and startup metrics",
+            
+            # Filmmaking
+            "practical filmmaking techniques and gear",
+            "color grading and visual storytelling",
+            "how budget affects creative decisions",
+            "editing techniques that shape narrative",
+            
+            # General techy observations
+            "tech product launches and their actual value",
+            "how technology shapes culture",
+            "productivity tools and their placebo effect",
+            "social media algorithms and content creation"
         ]
         
-        base_prompt = (
-            f"Create a professional, inspiring tweet about {random.choice(topics)}. "
-            f"Style: {state['style']}. "
-            f"Keep it under 280 characters, positive tone, no hashtags or links. "
-            f"Focus on insights, observations, or motivational thoughts."
-        )
+        # Controversial/ragebait topics - intentionally wrong or provocative
+        controversial_topics = [
+            # Cinema & Anime ragebaits
+            "say something objectively wrong about a beloved film that will make people correct you (e.g., 'nolan is overrated', 'mcu peaked with iron man 2', 'dubbed anime is better than subbed')",
+            "claim a controversial opinion about cinematography or directing that cinephiles will debate (e.g., 'lens choice doesn't matter that much', 'handheld camera is lazy filmmaking')",
+            "make a wrong statement about anime that fans will rush to correct (e.g., 'one piece animation is the best', 'filler episodes are the best part')",
+            
+            # ML & AI ragebaits
+            "say something technically incorrect about AI that engineers will correct (e.g., 'transformers are just fancy if-else statements', 'ai will replace all programmers by 2025')",
+            "claim a wrong understanding of ml concepts to trigger corrections (e.g., 'deep learning is just statistics', 'gpt understands what it's saying')",
+            "make deliberately oversimplified takes on ai that experts will debate (e.g., 'prompt engineering is the future of coding', 'agi is 2 years away')",
+            
+            # Football ragebaits
+            "say something factually wrong about football tactics or history (e.g., 'messi carried argentina alone', 'ronaldo invented the knuckleball', 'possession football is boring')",
+            "make a hot take comparing players that will spark debate (e.g., 'current gen players are softer', '[player x] better than [legend]')",
+            "state wrong stats or game analysis that football nerds will correct (e.g., 'xg is useless', 'defenders don't need technical skills')",
+            
+            # Formula 1 ragebaits
+            "say something wrong about f1 tech or regulations (e.g., 'drs ruined f1', 'ground effect cars are slower', 'bring back v12 engines')",
+            "make incorrect driver comparisons that f1 fans will debate (e.g., 'it's all the car', '[current driver] would beat [legend] easily')",
+            "claim wrong things about race strategy that will be corrected (e.g., 'pit stops are just driver skill', 'weather doesn't matter much')",
+            
+            # Tech & CS ragebaits
+            "say something wrong about programming that devs will correct (e.g., 'javascript is the best language', 'you don't need to learn data structures', 'vim users are just showing off')",
+            "make controversial framework takes that spark debate (e.g., 'react is dying', 'php is better than python', 'tabs vs spaces doesn't matter')",
+            "claim incorrect things about cs fundamentals (e.g., 'big o notation is overrated', 'clean code is a waste of time')",
+            
+            # Web3 & Startups ragebaits
+            "say overly optimistic or cynical things about web3 (e.g., 'nfts will replace all contracts', 'blockchain has zero real use cases', 'web3 is just aws with extra steps')",
+            "make wrong claims about startup culture (e.g., 'vcs are just gamblers', 'you need a co-founder to succeed', 'raise money or die')",
+            "state incorrect things about crypto or protocols (e.g., 'proof of stake is centralized', 'bitcoin is dead', 'solana > ethereum')",
+            
+            # Cross-domain ragebaits
+            "compare unrelated things incorrectly to spark debate (e.g., 'coding is harder than filmmaking', 'sports analytics ruined the games', 'ai-generated art is better')",
+            "make sweeping generalizations that people will counter (e.g., 'all [x] are overrated', 'nobody actually uses [y]', '[z] was better 10 years ago')"
+        ]
         
-        return base_prompt
+        selected_topic = random.choice(controversial_topics if is_controversial else regular_topics)
+        
+        # Build comprehensive system prompt
+        system_prompt = f"""
+You are a tech-savvy gen z who's genuinely into cinema, web shows, anime, machine learning, football, formula 1, filmmaking, computer science, AI, web3, startups, and technology culture.
+
+PERSONALITY:
+- You're knowledgeable but not pretentious
+- You have genuine takes, not just performative hot takes (unless it's a ragebait)
+- You code, watch films/anime, follow football and f1, and understand the tech behind things
+- You're critical but fair, except when deliberately being controversial
+- You appreciate both technical excellence and creative work
+- You're skeptical of hype but excited about real innovation
+- You're not trying too hard to be cool, just being yourself
+
+WRITING STYLE:
+- ALL lowercase letters, no exceptions
+- Normal gen z but not overdoing the slang
+- Use natural language, slight casual tone
+- No hashtags, no links, no mentions
+- Be specific when possible (mention actual techniques, players, shows, etc.)
+- Sound like a human, not a bot
+- Keep it concise and punchy
+- Can use 'tbh', 'ngl', 'lowkey', 'fr' sparingly and naturally
+- Vary sentence structure
+- Some tweets can be single statements, others can be multi-sentence
+
+CONTENT GUIDELINES:
+- Be authentic - share actual insights or observations
+- Don't just state obvious facts
+- Can be analytical, observational, or thought-provoking
+- Mix technical knowledge with cultural awareness
+- Show personality through your interests
+- Don't repeat topics or sentence structures from recent tweets
+
+{"CONTROVERSIAL MODE: You're making a ragebait tweet - say something intentionally wrong, oversimplified, or provocative that will make people correct you or debate in comments. The goal is engagement through (harmless) controversy. Don't be offensive, just wrong or hot-takey enough that knowledgeable people will want to respond. Still maintain lowercase and casual style." if is_controversial else "REGULAR MODE: Share a genuine take, insight, or observation. Be thoughtful and interesting."}
+
+TOPIC: {selected_topic}
+
+Generate a tweet (under 280 characters) about this topic. Make it sound natural and genuine. Remember: all lowercase, no hashtags/links.
+"""
+        
+        return system_prompt
     
     def _clean_tweet(self, tweet: str) -> str:
         """Clean and format tweet"""
         # Remove quotes if present
         tweet = tweet.strip('"\'')
         
-        # Remove common prefixes
-        prefixes = ["Tweet:", "Here's a tweet:", "Generated tweet:", "@"]
+        # Remove common prefixes (case insensitive)
+        prefixes = ["Tweet:", "Here's a tweet:", "Generated tweet:", "@", "tweet:", "here's a tweet:", "generated tweet:"]
         for prefix in prefixes:
-            if tweet.startswith(prefix):
+            if tweet.lower().startswith(prefix.lower()):
                 tweet = tweet[len(prefix):].strip()
         
-        # Ensure proper sentence structure
+        # Convert to lowercase (enforcing style)
+        tweet = tweet.lower()
+        
+        # Ensure proper sentence structure (but keep lowercase)
         tweet = tweet.strip()
-        if not tweet.endswith(('.', '!', '?', '…')):
-            tweet += '.'
+        
+        # Don't force periods - let tweets end naturally
+        # Gen Z tweets don't always need punctuation
         
         return tweet
     
